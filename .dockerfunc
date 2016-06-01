@@ -1,0 +1,73 @@
+#!/bin/bash
+
+alias docker_cleanup='docker-cleanup'
+docker-cleanup(){
+  docker rm -v $(docker ps --filter status=exited -q 2>/dev/null) 2>/dev/null
+	docker rmi $(docker images --filter dangling=true -q 2>/dev/null) 2>/dev/null
+}
+
+alias docker_delete_stopped='docker-delete-stopped'
+docker-delete-stopped(){
+  local name=$1
+	local state=$(docker inspect --format "{{.State.Running}}" $name 2>/dev/null)
+
+	if [[ "$state" == "false" ]]; then
+		docker rm $name
+	fi
+}
+
+arduino() {
+  docker-delete-stopped arduino
+  docker run -d \
+    --name arduino \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -e DISPLAY=unix$DISPLAY \
+    --device /dev/ttyACM0 \
+    sensenichma/arduino
+}
+
+scala() {
+  docker run --rm -it \
+    --name scala \
+    -v $HOME/Engineering/scala:/usr/scala \
+    sensenichma/scala "$@"
+}
+
+scalac() {
+  docker run --rm -it \
+    --name scalac \
+    --entrypoint=scalac \
+    -v $HOME/Engineering/scala:/usr/scala \
+    sensenichma/scala "$@"
+}
+
+gimp () {
+  docker-delete-stopped gimp
+
+  docker run -d \
+   -v /etc/localtime:/etc/localtime:ro \
+   -v /tmp/.X11-unix:/tmp/.X11-unix \
+   -e DISPLAY=unix$DISPLAY \
+   -v $HOME/Pictures:/root/Pictures \
+   --name gimp \
+   sensenichma/gimp
+}
+
+go () {
+  docker run --rm -it \
+    --name golang \
+    --entrypoint go \
+    -v $HOME/Engineering/Go:/go \
+    golang "$@"
+}
+
+vlc() {
+  docker-delete-stopped vlc
+  docker run -d \
+    --name vlc \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v /media:/media:ro \
+    -e DISPLAY=unix$DISPLAY \
+    --device /dev/snd \
+    sensenichma/vlc
+}
